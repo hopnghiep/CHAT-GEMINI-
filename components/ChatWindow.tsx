@@ -10,7 +10,7 @@ import Dropdown from './Dropdown';
 import { decode, decodeAudioData } from '../services/audioUtils';
 import ExportChatModal from './ExportChatModal';
 import ShareModal from './ShareModal';
-import { exportToPlainText, exportToJson, exportToPdf } from '../services/exportService';
+import { exportToPlainText, exportToJson, exportToPdf, printChat } from '../services/exportService';
 import { v4 as uuidv4 } from 'uuid';
 import { LOCAL_STORAGE_KEY_MESSAGE_DRAFT, AVAILABLE_TTS_VOICES } from '../constants'; // Import new constants
 
@@ -410,7 +410,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [currentChat, onClearAllMessages, stopAllAudio]);
 
-  const handleExportChat = useCallback((format: 'txt' | 'json' | 'pdf') => {
+  const handleExportChat = useCallback((format: 'txt' | 'json' | 'pdf' | 'print') => {
     if (!currentChat) return;
     if (format === 'txt') {
       exportToPlainText(currentChat);
@@ -418,6 +418,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       exportToJson(currentChat);
     } else if (format === 'pdf') {
       exportToPdf(currentChat);
+    } else if (format === 'print') {
+      printChat(currentChat);
     }
     // Close modal is handled by ExportChatModal's onConfirm
   }, [currentChat]);

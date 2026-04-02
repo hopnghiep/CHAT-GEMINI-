@@ -51,79 +51,167 @@ export const exportToJson = (chat: ChatSession): void => {
  */
 export const exportToPdf = (chat: ChatSession): void => {
   const doc = new jsPDF();
-  let y = 10; // Initial Y position
+  const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const margin = 20;
+  const contentWidth = pageWidth - (margin * 2);
+  let y = margin;
 
-  doc.setFontSize(18);
-  doc.text(`Tiêu đề Chat: ${chat.name}`, 10, y);
-  y += 10;
+  // Helper to add a new page if needed
+  const checkPageBreak = (neededHeight: number) => {
+    if (y + neededHeight > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+      return true;
+    }
+    return false;
+  };
 
+  // Title
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  const titleLines = doc.splitTextToSize(chat.name, contentWidth);
+  doc.text(titleLines, margin, y);
+  y += (titleLines.length * 8) + 5;
+
+  // Metadata
   doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(100);
-  doc.text(`Tạo lúc: ${new Date(chat.createdAt).toLocaleString()}`, 10, y);
-  y += 7;
-  doc.text(`Cập nhật lúc: ${new Date(chat.updatedAt).toLocaleString()}`, 10, y);
-  y += 10;
+  doc.text(`Tao luc: ${new Date(chat.createdAt).toLocaleString()}`, margin, y);
+  y += 6;
+  doc.text(`Cap nhat luc: ${new Date(chat.updatedAt).toLocaleString()}`, margin, y);
+  y += 15;
 
-  doc.setFontSize(14);
-  doc.setTextColor(0);
-  doc.text('--- Lịch sử Chat ---', 10, y);
-  y += 10;
-
-  doc.setFontSize(10);
-  doc.setTextColor(0); // Reset text color
+  doc.setDrawColor(200);
+  doc.line(margin, y - 5, pageWidth - margin, y - 5);
 
   chat.messages.forEach((message) => {
-    const role = message.role === 'user' ? 'Người dùng' : 'Gemini';
-    const partsToDisplay = message.editedParts || message.parts;
+    const role = message.role === 'user' ? 'Nguoi dung' : 'Gemini';
+    const timestamp = new Date(message.timestamp).toLocaleString();
+    const parts = message.editedParts || message.parts;
 
-    // Check if new page is needed for the header
-    if (y + 20 > doc.internal.pageSize.height - 10) {
-      doc.addPage();
-      y = 10; // Reset Y for new page
-    }
+    checkPageBreak(20);
 
+    // Message Header
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${role}:`, 10, y);
-    y += 5; // Space after role
+    if (message.role === 'user') {
+      doc.setTextColor(37, 99, 235); // blue-600
+    } else {
+      doc.setTextColor(75, 85, 99); // gray-600
+    }
+    doc.text(`${role}`, margin, y);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150);
+    const timeWidth = doc.getTextWidth(timestamp);
+    doc.text(timestamp, pageWidth - margin - timeWidth, y);
+    y += 8;
 
-    partsToDisplay.forEach((part) => {
-      // Check if new page is needed for the part content
-      if (y + 15 > doc.internal.pageSize.height - 10) { // Estimate height needed for text/image/link
-        doc.addPage();
-        y = 10; // Reset Y for new page
-      }
-
+    parts.forEach((part) => {
       if ('text' in part) {
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
-        const lines = doc.splitTextToSize(part.text, doc.internal.pageSize.width - 20); // 20mm padding
-        doc.text(lines, 20, y); // Indent content a bit
-        y += (lines.length * 5) + 2; // Adjust Y based on lines of text
-      } else if ('inlineData' in part) { // ImageDataPart
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(100);
-        doc.text(`[Hình ảnh: ${part.inlineData.mimeType}]`, 20, y);
-        y += 10;
-        doc.setTextColor(0); // Reset color
+        doc.setTextColor(0);
+        
+        // Remove Vietnamese accents for PDF compatibility with standard fonts
+        // This is a workaround because standard jsPDF fonts don't support Unicode
+        const cleanText = part.text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        
+        const lines = doc.splitTextToSize(cleanText, contentWidth - 5);
+        
+        lines.forEach((line: string) => {
+          checkPageBreak(6);
+          doc.text(line, margin + 5, y);
+          y += 6;
+        });
+        y += 2;
+      } else if ('inlineData' in part) {
+        const imgData = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        const imgWidth = 60;
+        const imgHeight = 45; 
+        
+        checkPageBreak(imgHeight + 10);
+        try {
+          // Use JPEG if possible, or PNG
+          const format = part.inlineData.mimeType.includes('png') ? 'PNG' : 'JPEG';
+          doc.addImage(imgData, format, margin + 5, y, imgWidth, imgHeight);
+          y += imgHeight + 10;
+        } catch (e) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(150);
+          doc.text(`[Hinh anh: ${part.inlineData.mimeType}]`, margin + 5, y);
+          y += 10;
+        }
+      } else if ('link' in part) {
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
-      } else if ('link' in part) { // LinkPart
-        doc.setFont('helvetica', 'normal');
-        const linkText = `${part.link.title || 'Link'}: ${part.link.url}`;
-        const lines = doc.splitTextToSize(linkText, doc.internal.pageSize.width - 20);
-        doc.text(lines, 20, y);
-        y += (lines.length * 5) + 2;
-        doc.setTextColor(0); // Reset color
+        doc.setTextColor(0, 0, 255); // Blue for links
+        const linkText = part.link.title || part.link.url;
+        const cleanLinkText = linkText.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        
+        checkPageBreak(6);
+        doc.text(cleanLinkText, margin + 5, y);
+        doc.link(margin + 5, y - 5, doc.getTextWidth(cleanLinkText), 6, { url: part.link.url });
+        y += 8;
+        doc.setTextColor(0);
       }
     });
 
-    doc.setFontSize(8);
-    doc.setTextColor(150);
-    doc.text(`(${new Date(message.timestamp).toLocaleString()})`, 20, y); // Timestamp below content
-    y += 10; // Space after timestamp
-
-    doc.setFontSize(10); // Reset font size for next message
-    doc.setTextColor(0); // Reset text color
-    y += 5; // Extra space between messages
+    y += 5; // Space between messages
   });
 
   doc.save(`${chat.name.replace(/\s/g, '_')}.pdf`);
+};
+
+/**
+ * Prints a chat session using the browser's print engine.
+ * This is often the best way to "export" to PDF while preserving all characters and styling.
+ * @param chat The ChatSession object to print.
+ */
+export const printChat = (chat: ChatSession): void => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const messagesHtml = chat.messages.map(msg => {
+    const role = msg.role === 'user' ? 'Người dùng' : 'Gemini';
+    const content = getMessageDisplayContent(msg);
+    return `
+      <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+        <strong style="color: ${msg.role === 'user' ? '#2563eb' : '#4b5563'}">${role}</strong>
+        <span style="font-size: 0.8em; color: #9ca3af; margin-left: 10px;">${new Date(msg.timestamp).toLocaleString()}</span>
+        <div style="margin-top: 5px; white-space: pre-wrap;">${content}</div>
+      </div>
+    `;
+  }).join('');
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${chat.name}</title>
+        <style>
+          body { font-family: sans-serif; padding: 40px; line-height: 1.6; color: #1f2937; }
+          h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
+          .meta { color: #6b7280; font-size: 0.9em; margin-bottom: 30px; }
+        </style>
+      </head>
+      <body>
+        <h1>${chat.name}</h1>
+        <div class="meta">
+          Tạo lúc: ${new Date(chat.createdAt).toLocaleString()}<br>
+          Cập nhật lúc: ${new Date(chat.updatedAt).toLocaleString()}
+        </div>
+        ${messagesHtml}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 500);
 };

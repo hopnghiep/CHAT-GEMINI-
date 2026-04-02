@@ -7,11 +7,11 @@ interface ExportChatModalProps {
   isOpen: boolean;
   onClose: () => void;
   chat: ChatSession | null;
-  onExport: (format: 'txt' | 'json' | 'pdf') => void;
+  onExport: (format: 'txt' | 'json' | 'pdf' | 'print') => void;
 }
 
 const ExportChatModal: React.FC<ExportChatModalProps> = ({ isOpen, onClose, chat, onExport }) => {
-  const [selectedFormat, setSelectedFormat] = useState<'txt' | 'json' | 'pdf'>('txt');
+  const [selectedFormat, setSelectedFormat] = useState<'txt' | 'json' | 'pdf' | 'print'>('txt');
 
   if (!isOpen || !chat) return null;
 
@@ -65,6 +65,17 @@ const ExportChatModal: React.FC<ExportChatModalProps> = ({ isOpen, onClose, chat
               onChange={() => setSelectedFormat('pdf')}
             />
             <span className="ml-2 text-gray-700 dark:text-gray-300">PDF (.pdf)</span>
+          </label>
+          <label className="inline-flex items-center">
+            <input
+              type="radio"
+              className="form-radio text-blue-600 dark:text-blue-400"
+              name="exportFormat"
+              value="print"
+              checked={selectedFormat === 'print'}
+              onChange={() => setSelectedFormat('print')}
+            />
+            <span className="ml-2 text-gray-700 dark:text-gray-300">In (Hỗ trợ tiếng Việt tốt nhất)</span>
           </label>
         </div>
       </div>
