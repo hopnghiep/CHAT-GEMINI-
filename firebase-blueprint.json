@@ -1,0 +1,133 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID" },
+        "email": { "type": "string", "description": "User email" },
+        "themeSettings": { "$ref": "ThemeSettings" },
+        "ttsSettings": { "$ref": "TtsSettings" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "ThemeSettings": {
+      "title": "ThemeSettings",
+      "description": "User theme preferences",
+      "type": "object",
+      "properties": {
+        "theme": { "type": "string", "enum": ["light", "dark", "system"] },
+        "contrast": { "type": "string", "enum": ["normal", "high"] },
+        "fontSize": { "type": "string", "enum": ["14px", "16px", "18px"] },
+        "fontFamily": { "type": "string", "enum": ["Inter, sans-serif", "Lora, serif", "Fira Code, monospace"] }
+      }
+    },
+    "TtsSettings": {
+      "title": "TtsSettings",
+      "description": "Text-to-speech settings",
+      "type": "object",
+      "properties": {
+        "voiceName": { "type": "string" },
+        "speakingRate": { "type": "number" }
+      }
+    },
+    "Folder": {
+      "title": "Folder",
+      "description": "A folder to organize chat sessions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerId"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "A chat session metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "folderId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerId"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A single message in a chat session",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "parts": { "type": "array", "items": { "type": "object" } },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "isPinned": { "type": "boolean" },
+        "isError": { "type": "boolean" }
+      },
+      "required": ["id", "role", "parts", "timestamp"]
+    },
+    "AppLink": {
+      "title": "AppLink",
+      "description": "A shared link",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "url", "title", "ownerId"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A daily journal entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["id", "title", "content", "ownerId", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User settings and profile"
+    },
+    "/users/{userId}/folders/{folderId}": {
+      "schema": "Folder",
+      "description": "User folders"
+    },
+    "/users/{userId}/chats/{chatId}": {
+      "schema": "ChatSession",
+      "description": "User chat sessions"
+    },
+    "/users/{userId}/chats/{chatId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Messages within a chat session"
+    },
+    "/users/{userId}/links/{linkId}": {
+      "schema": "AppLink",
+      "description": "User saved links"
+    },
+    "/users/{userId}/journal/{entryId}": {
+      "schema": "JournalEntry",
+      "description": "User journal entries"
+    }
+  }
+}

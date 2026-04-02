@@ -1,0 +1,187 @@
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: /users/{userId}
+// Fields:
+//   - uid: string (required) - Unique user ID
+//   - email: string (required) - User email
+//   - themeSettings: map (optional) - User theme preferences
+//   - ttsSettings: map (optional) - Text-to-speech settings
+//   - updatedAt: string (optional) - ISO 8601 date-time
+//
+// Collection: /users/{userId}/folders/{folderId}
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - ownerId: string (required)
+//   - createdAt: string (required)
+//   - updatedAt: string (required)
+//
+// Collection: /users/{userId}/chats/{chatId}
+// Fields:
+//   - id: string (required)
+//   - name: string (required)
+//   - folderId: string (optional)
+//   - ownerId: string (required)
+//   - createdAt: string (required)
+//   - updatedAt: string (required)
+//
+// Collection: /users/{userId}/chats/{chatId}/messages/{messageId}
+// Fields:
+//   - id: string (required)
+//   - role: string (required) - 'user' or 'model'
+//   - parts: list (required)
+//   - timestamp: string (required)
+//   - isPinned: bool (optional)
+//   - isError: bool (optional)
+//
+// Collection: /users/{userId}/links/{linkId}
+// Fields:
+//   - id: string (required)
+//   - url: string (required)
+//   - title: string (required)
+//   - ownerId: string (required)
+//   - createdAt: string (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "hopnghiep@gmail.com" && request.auth.token.email_verified == true ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'themeSettings', 'ttsSettings', 'updatedAt', 'role']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && isValidEmail(data.email);
+    }
+
+    function isValidFolder(data) {
+      return hasOnlyAllowedFields(['id', 'name', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.ownerId == request.auth.uid &&
+             isValidDateString(data.createdAt) && isValidDateString(data.updatedAt);
+    }
+
+    function isValidChat(data) {
+      return hasOnlyAllowedFields(['id', 'name', 'folderId', 'ownerId', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.ownerId == request.auth.uid &&
+             isValidDateString(data.createdAt) && isValidDateString(data.updatedAt);
+    }
+
+    function isValidMessage(data) {
+      return hasOnlyAllowedFields(['id', 'role', 'parts', 'timestamp', 'isPinned', 'isError']) &&
+             data.id is string && data.role in ['user', 'model'] &&
+             data.parts is list && data.parts.size() > 0 &&
+             isValidDateString(data.timestamp);
+    }
+
+    function isValidLink(data) {
+      return hasOnlyAllowedFields(['id', 'url', 'title', 'ownerId', 'createdAt']) &&
+             data.id is string && isValidUrl(data.url) &&
+             data.title is string && data.title.size() > 0 &&
+             data.ownerId == request.auth.uid &&
+             isValidDateString(data.createdAt);
+    }
+
+    function isValidJournalEntry(data) {
+      return hasOnlyAllowedFields(['id', 'title', 'content', 'tags', 'ownerId', 'createdAt', 'updatedAt', 'date']) &&
+             data.id is string && data.title is string && data.title.size() > 0 &&
+             data.content is string && data.ownerId == request.auth.uid &&
+             data.tags is list &&
+             isValidDateString(data.createdAt) && isValidDateString(data.updatedAt) &&
+             data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+
+      match /folders/{folderId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidFolder(request.resource.data);
+        allow update: if isOwner(userId) && isValidFolder(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /chats/{chatId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidChat(request.resource.data);
+        allow update: if isOwner(userId) && isValidChat(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+
+        match /messages/{messageId} {
+          allow read: if isOwner(userId) || isAdmin();
+          allow create: if isOwner(userId) && isValidMessage(request.resource.data);
+          allow update: if isOwner(userId) && isValidMessage(request.resource.data);
+          allow delete: if isOwner(userId) || isAdmin();
+        }
+      }
+
+      match /links/{linkId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidLink(request.resource.data);
+        allow update: if isOwner(userId) && isValidLink(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
+      match /journal/{entryId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidJournalEntry(request.resource.data);
+        allow update: if isOwner(userId) && isValidJournalEntry(request.resource.data);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Chat</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Inter:wght@400;500;600;700&family=Lora&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.1",
+    "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
+    "jspdf": "https://aistudiocdn.com/jspdf@2.5.1"
+  }
+}
+</script>
+<style>
+  /* High Contrast Mode Styles */
+  /* This provides stronger visual distinction for users who need it. */
+
+  /* Light High Contrast */
+  .high-contrast {
+    --hc-bg-primary: white;
+    --hc-bg-secondary: #e0e0e0;
+    --hc-text-primary: black;
+    --hc-text-secondary: #111;
+    --hc-border: #555;
+    --hc-accent-bg: #0000d0; /* Strong blue */
+    --hc-accent-text: white;
+  }
+  .high-contrast body, .high-contrast .bg-gray-100 { background-color: var(--hc-bg-primary) !important; color: var(--hc-text-primary) !important; }
+  .high-contrast .bg-white, .high-contrast .bg-gray-200 { background-color: var(--hc-bg-secondary) !important; }
+  .high-contrast .text-gray-800, .high-contrast .text-gray-900 { color: var(--hc-text-primary) !important; }
+  .high-contrast .border-gray-200, .high-contrast .border-gray-300 { border-color: var(--hc-border) !important; }
+  .high-contrast .bg-blue-500 { background-color: var(--hc-accent-bg) !important; color: var(--hc-accent-text) !important; }
+
+  /* Dark High Contrast */
+  .dark.high-contrast {
+    --hc-dark-bg-primary: black;
+    --hc-dark-bg-secondary: #222;
+    --hc-dark-text-primary: white;
+    --hc-dark-text-secondary: #eee;
+    --hc-dark-border: #aaa;
+    --hc-dark-accent-bg: #3b82f6; /* Bright blue */
+    --hc-dark-accent-text: black;
+  }
+  .dark.high-contrast body, .dark.high-contrast .dark\:bg-gray-800, .dark.high-contrast .dark\:bg-gray-900 { background-color: var(--hc-dark-bg-primary) !important; color: var(--hc-dark-text-primary) !important; }
+  .dark.high-contrast .dark\:bg-gray-700 { background-color: var(--hc-dark-bg-secondary) !important; }
+  .dark.high-contrast .dark\:text-white, .dark.high-contrast .dark\:text-gray-100 { color: var(--hc-dark-text-primary) !important; }
+  .dark.high-contrast .dark\:border-gray-700, .dark.high-contrast .dark\:border-gray-600 { border-color: var(--hc-dark-border) !important; }
+  .dark.high-contrast .dark\:bg-blue-600, .dark.high-contrast .dark\:bg-blue-500 { background-color: var(--hc-dark-accent-bg) !important; color: var(--hc-dark-accent-text) !important; }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    <script>
+      // Placeholder for API_KEY. In a real environment, this would be handled by your build process
+      // or injected securely. For local development with `@google/genai`, ensure `process.env.API_KEY`
+      // is set in your environment (e.g., via a .env file and a bundler like Vite/Webpack).
+      // This script ensures `process.env` exists for the client-side code if not already provided.
+      // DO NOT put your actual API key here in production.
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
+      // You should set process.env.API_KEY through your build system (e.g., Vite, Webpack)
+      // or by deploying to a platform that handles environment variables.
+      // For testing, you might temporarily hardcode it here, but it's HIGHLY DISCOURAGED for production.
+      // window.process.env.API_KEY = "YOUR_GEMINI_API_KEY"; // <-- REPLACE WITH YOUR ACTUAL KEY
+    </script>
+</body>
+</html>
